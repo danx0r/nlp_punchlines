@@ -170,6 +170,8 @@ def train_generator(train_dataset, model, use_gpu=True,
     if os.path.exists(output_dir) is False:
         os.mkdir(output_dir)
 
+    train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+
     model, device = set_device(model, use_gpu)
     model.train()  # Put model in "train" mode
  
@@ -177,7 +179,6 @@ def train_generator(train_dataset, model, use_gpu=True,
     optimizer = AdamW(model.parameters(), lr=lr)
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=-1)
 
-    train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True)
     loss=0
     accumulating_batch_count = 0
     input_tensor = None
@@ -186,25 +187,34 @@ def train_generator(train_dataset, model, use_gpu=True,
 
         print(f"Training epoch {epoch}")
         print(loss)
+        
         for idx, entry in tqdm(enumerate(train_dataloader)):
             (input_tensor, carry_on, remainder) = pack_tensor(entry, input_tensor, 768)
-
             if carry_on and idx != len(train_dataloader) - 1:
                 continue
-
             input_tensor = input_tensor.to(device)
             outputs = model(input_tensor, labels=input_tensor)
             loss = outputs[0]
             loss.backward()
-
             if (accumulating_batch_count % batch_size) == 0:
                 optimizer.step()
                 scheduler.step()
                 optimizer.zero_grad()
                 model.zero_grad()
-
             accumulating_batch_count += 1
             input_tensor = None
+
+#         for batch in tqdm(train_dataloader):
+#             batch = {k: v.to(device) for k, v in batch.items()}
+#             outputs = model(**batch)
+#             loss = outputs[0]
+#             loss.backward()
+#             optimizer.step()
+#             scheduler.step()
+#             optimizer.zero_grad()
+#             model.zero_grad()
+#             progress_bar.update(1)
+    
         if save_model_on_epoch:
             torch.save(
                 model.state_dict(),
