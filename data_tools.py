@@ -16,8 +16,12 @@ def format_qa(string, string_type='q'):
 
 
 def joke_as_qa(setup, punchline, just_q=False, just_a=False):
-    if type(setup)==str: setup = [setup]
-    if type(punchline)==str: punchline = [punchline]
+    if type(setup)==str and type(punchline)==str: 
+        str_input = True
+        setup = [setup]
+        punchline = [punchline]
+    else:
+        str_input = False
     jokes = []
     for i,s in enumerate(setup):
         p = punchline[i]
@@ -32,6 +36,7 @@ def joke_as_qa(setup, punchline, just_q=False, just_a=False):
         if just_a:
             joke = joke[joke.find('Answer: '):]
         jokes.append(joke)
+    if str_input: jokes = jokes[0]
     return jokes
 
 

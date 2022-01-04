@@ -64,7 +64,7 @@ def pack_tensor(new_tensor, packed_tensor, max_seq_len):
         return packed_tensor, True, None
     
     
-def set_device(model, use_gpu):
+def set_device(model, use_gpu=True):
     # Use GPU device if requested (default: use_gpu=True) and it is available
     device = torch.device("cpu")
     if use_gpu:
@@ -87,7 +87,7 @@ def train_classifier(dataset, model, use_gpu=True,
     if os.path.exists(output_dir) is False:
         os.mkdir(output_dir)
 
-    model, device = set_device(model, use_gpu)
+    model, device = set_device(model, use_gpu=use_gpu)
     
     train_dataloader = DataLoader(dataset["train"], shuffle=True, batch_size=8)
     eval_dataloader = DataLoader(dataset["test"], batch_size=8)
@@ -138,7 +138,7 @@ def train_classifier(dataset, model, use_gpu=True,
 def classify_punchlines(dataset, model, use_gpu=True, batch_size=8):
     
     # Put model on the correct device
-    model, device = set_device(model, use_gpu)
+    model, device = set_device(model, use_gpu=use_gpu)
     model.eval()   # Put the model into "eval" mode
     
     eval_dataloader = DataLoader(dataset, batch_size=batch_size)
@@ -172,7 +172,7 @@ def train_generator(train_dataset, model, use_gpu=True,
 
     train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True)
 
-    model, device = set_device(model, use_gpu)
+    model, device = set_device(model, use_gpu=use_gpu)
     model.train()  # Put model in "train" mode
  
     acc_steps = 100
@@ -203,18 +203,6 @@ def train_generator(train_dataset, model, use_gpu=True,
                 model.zero_grad()
             accumulating_batch_count += 1
             input_tensor = None
-
-#         for batch in tqdm(train_dataloader):
-#             batch = {k: v.to(device) for k, v in batch.items()}
-#             outputs = model(**batch)
-#             loss = outputs[0]
-#             loss.backward()
-#             optimizer.step()
-#             scheduler.step()
-#             optimizer.zero_grad()
-#             model.zero_grad()
-#             progress_bar.update(1)
-    
         if save_model_on_epoch:
             torch.save(
                 model.state_dict(),

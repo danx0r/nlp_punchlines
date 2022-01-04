@@ -22,7 +22,7 @@ def add_fake_punchlines(infile, start_i=0):
     
     df = pd.read_csv(infile,dtype={'setup':str,'punchline':str,'score':int},keep_default_na=False)
     print('{} jokes in the dataset'.format(df.shape[0]))    
-    df['full_qa'] = df.apply(lambda x: dtools.joke_as_qa(x['setup'], x['punchline'])[0], axis=1)
+    df['full_qa'] = df.apply(lambda x: dtools.joke_as_qa(x['setup'], x['punchline']), axis=1)
     df['prompt'] = df['full_qa'].apply(lambda x: x[:x.find('Answer: ')+len('Answer:')])    
     
     checkpoint, tokenizer, model = mtools.load_model('gpt2')
