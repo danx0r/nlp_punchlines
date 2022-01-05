@@ -1,4 +1,4 @@
-from torch import load
+import torch
 from datasets import Dataset
 import numpy as np
 
@@ -16,12 +16,12 @@ classifier_filename = 'models/ClassifyJokes_bert_1.00subset_2021-12-16.pt'
 # Load the vanilla generator model, plus its tokenizer
 gen_checkpoint, gen_tokenizer, gen_model = mtools.load_model('gpt2')  
 # Load the fine-tuned generator
-gen_model_ft = load(generator_filename, map_location=torch.device('cpu'))
+gen_model_ft = torch.load(generator_filename, map_location=torch.device('cpu'))
 
 # Load the vanilla BERT model, plus its tokenizer
 class_checkpoint, class_tokenizer, temp_model = mtools.load_model('bert')
 # Load our trained classifier
-class_model = load(classifier_filename, map_location=torch.device('cpu'))
+class_model = torch.load(classifier_filename, map_location=torch.device('cpu'))
 
 # Put all models on the specified device (GPU or CPU)
 gen_model, device = mtools.set_device(gen_model, use_gpu=USE_GPU)
