@@ -6,19 +6,22 @@ import model_tools as mtools
 
 USE_GPU = False
 
+generator_filename = 'models/JokeGen_gpt2_1.00subset_3epochs_2022-01-05.pt'
+classifier_filename = 'models/ClassifyJokes_bert_1.00subset_2021-12-16.pt'
+
 #-------------------------------------
 # Load the NLP Models
 #-------------------------------------
 
 # Load the vanilla generator model, plus its tokenizer
 gen_checkpoint, gen_tokenizer, gen_model = mtools.load_model('gpt2')  
-# Load the fine-tuned model
-gen_model_ft = load('models/JokeGen_gpt2_1.00subset_3epochs_2022-01-05.pt')
+# Load the fine-tuned generator
+gen_model_ft = load(generator_filename, map_location=torch.device('cpu'))
 
 # Load the vanilla BERT model, plus its tokenizer
 class_checkpoint, class_tokenizer, temp_model = mtools.load_model('bert')
 # Load our trained classifier
-class_model = load('models/ClassifyJokes_bert_1.00subset_2021-12-16.pt')
+class_model = load(classifier_filename, map_location=torch.device('cpu'))
 
 # Put all models on the specified device (GPU or CPU)
 gen_model, device = mtools.set_device(gen_model, use_gpu=USE_GPU)
