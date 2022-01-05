@@ -6,15 +6,23 @@ import model_tools as mtools
 
 USE_GPU = False
 
-# Load the punchline generator model
-gen_checkpoint, gen_tokenizer, gen_model = mtools.load_model('gpt2')
+#-------------------------------------
+# Load the NLP Models
+#-------------------------------------
+
+# Load the vanilla generator model, plus its tokenizer
+gen_checkpoint, gen_tokenizer, gen_model = mtools.load_model('gpt2')  
+# Load the fine-tuned model
 gen_model_ft = load('models/JokeGen_gpt2_1.00subset_3epochs_2022-01-05.pt')
+
+# Load the vanilla BERT model, plus its tokenizer
+class_checkpoint, class_tokenizer, temp_model = mtools.load_model('bert')
+# Load our trained classifier
+class_model = load('models/ClassifyJokes_bert_1.00subset_2021-12-16.pt')
+
+# Put all models on the specified device (GPU or CPU)
 gen_model, device = mtools.set_device(gen_model, use_gpu=USE_GPU)
 gen_model_ft, device = mtools.set_device(gen_model_ft, use_gpu=USE_GPU)
-
-# Load the classification model
-class_checkpoint, class_tokenizer, temp_model = mtools.load_model('bert')
-class_model = load('models/ClassifyJokes_bert_1.00subset_2021-12-16.pt')
 class_model, device = mtools.set_device(class_model, use_gpu=USE_GPU)
 
 
@@ -47,16 +55,12 @@ def get_punchline(input_text, vanilla_gpt2=False, best_of=5):
     tokenized_gentext = tokenized_gentext.remove_columns(["gentext"])
     tokenized_gentext.set_format("torch")
 
-#     print('======')
-#     print(tokenized_gentext)
-#     print('------')
+    # Use the classifier to get predictions (1 = real joke, 0 = fake joke) 
+    #     and probability of being a "real" joke (from 0.00 to 1.00)
     preds, probs = mtools.classify_punchlines(tokenized_gentext, class_model, return_prob=True,
                                               batch_size=best_of, use_gpu=USE_GPU)
     
-#     for i in range(best_of):
-#         print(probs[i])
-#         print(punchlines[i])
-
+    # Return the punchline that has the highest probability
     return punchlines[np.argmax(probs)]
 
 
