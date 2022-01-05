@@ -135,7 +135,9 @@ def train_classifier(dataset, model, use_gpu=True,
     return model
 
 
-def classify_punchlines(dataset, model, use_gpu=True, batch_size=8):
+def classify_punchlines(dataset, model, 
+                        use_gpu=True, batch_size=8,
+                        return_prob=False):
     
     # Put model on the correct device
     model, device = set_device(model, use_gpu=use_gpu)
@@ -145,7 +147,7 @@ def classify_punchlines(dataset, model, use_gpu=True, batch_size=8):
     print('{} batches to process (batch_size={})'.format(len(eval_dataloader),batch_size))
     progress_bar = tqdm(range(len(eval_dataloader)))
 
-    predictions = []
+    predictions = []; probs = []
     for batch in eval_dataloader:
         batch = {k: v.to(device) for k, v in batch.items()}
         with torch.no_grad():
@@ -155,9 +157,17 @@ def classify_punchlines(dataset, model, use_gpu=True, batch_size=8):
         if predictions_i.device != 'cpu':
             predictions_i = predictions_i.to(device='cpu')
         predictions.extend(list(predictions_i.numpy()))
+        if return_prob==True:
+            probs_i = F.softmax(outputs.logits, dim=-1)
+            if probs_i.device != 'cpu':
+                probs_i = probs_i.to(device='cpu')
+            probs.extend(list([p[-1] for p in probs_i.numpy()]))
         progress_bar.update(1)
-                        
-    return predictions
+
+    if return_prob:
+        return predictions, probs
+    else:
+        return predictions
 
     
 def train_generator(train_dataset, model, use_gpu=True,
@@ -280,7 +290,9 @@ def generate(model, tokenizer, prompts,
             output_tokens = list(gentokens.squeeze().numpy())
             output_text = tokenizer.decode(output_tokens)
             output_list.append(output_text)
-                
+
+    if n==1: 
+        output_list = output_list[0]
     return output_list
 
 

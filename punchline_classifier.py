@@ -25,7 +25,7 @@ def tokenize_function(example):
     return output
 
 
-def classify_punchlines(train_files, test_files, downsample=1):
+def train_punchline_classifier(train_files, test_files, downsample=1):
     global tokenizer
 
     # Load the specified train and test datasets
@@ -64,7 +64,6 @@ def classify_punchlines(train_files, test_files, downsample=1):
     return model
 
 
-
 if __name__ == "__main__":
     
     # Get command-line arguments
@@ -83,6 +82,6 @@ if __name__ == "__main__":
     print('Using these files for training data: {}'.format(train_files))
     print(' Using these files for testing data: {}'.format(test_files))
     
-    classify_punchlines(train_files, test_files, downsample=args.downsample)
+    train_punchline_classifier(train_files, test_files, downsample=args.downsample)
     
     
