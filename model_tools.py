@@ -233,8 +233,9 @@ def generate(model, tokenizer, prompts,
     '''
 
     # Input is a list of strings with length n
-    if type(prompts)==str: prompts = [prompts]
-    n = len(prompts)
+    str_input = type(prompts)==str
+    if str_input:
+        prompts = [prompts]
 
     # Use GPU device if requested (default: use_gpu=True) and it is available
     device = torch.device("cpu")
@@ -291,7 +292,7 @@ def generate(model, tokenizer, prompts,
             output_text = tokenizer.decode(output_tokens)
             output_list.append(output_text)
 
-    if n==1: 
+    if str_input:
         output_list = output_list[0]
     return output_list
 

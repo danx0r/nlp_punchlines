@@ -63,6 +63,7 @@ def get_punchline(input_text, vanilla_gpt2=False, best_of=5):
     preds, probs = mtools.classify_punchlines(tokenized_gentext, class_model, return_prob=True,
                                               batch_size=best_of, use_gpu=USE_GPU)
     
+    print('Best punchline score = {}'.format(np.max(probs)))
     # Return the punchline that has the highest probability
     return punchlines[np.argmax(probs)]
 

@@ -25,7 +25,8 @@ def tokenize_function(example):
     # Tokenize the sequences
     #  - pad and truncate to make all the same length for happy PyTorch tensors
     output = tokenizer(q, a, padding="max_length", max_length=60, truncation=True)
-    # Give attention to the first pad token
+    # Give attention to the first pad token (because it's the EOS token, and we want 
+    #    our model to learn to add EOS tokens).
     for am in output['attention_mask']:
         if 0 in am:
             pad_start = am.index(0)
@@ -58,12 +59,13 @@ def fine_tune(train_files, use_model="gpt2", downsample=1, nepochs=3):
     tokenized_datasets.set_format("torch")
     
     train_dataset = tokenized_datasets['train']['input_ids']
-#     print('{:8d} jokes encoded in the training set'.format(train_dataset.joke_count))
     
     model = mtools.train_generator(train_dataset, model, tokenizer, epochs=nepochs)
 
     if os.path.exists('models') is False: os.mkdir('models')
-    filename = 'models/JokeGen_{}_{:4.2f}subset_{}epochs_{}.pt'.format(use_model,1./downsample,nepochs,datetime.now().date())
+    basename = 'models/JokeGen_{}_'.format(use_model)
+    runname = '{:4.2f}subset_{}epochs_{}'.format(1./downsample,nepochs,datetime.now().date())
+    filename = basename + runname + '.pt'
     print('Saving model as {}'.format(filename))
     torch.save(model,filename)
     
