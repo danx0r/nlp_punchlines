@@ -75,7 +75,11 @@ def get_punchline(input_text, vanilla_gpt2=False, best_of=5):
 
 
 if __name__ == "__main__":
-    init()
+    import sys
+    if "--cpu" in sys.argv:
+        init(use_gpu=False)
+    else:
+        init()
     print ("------------------------------------------------------------------")
     setup = "Why did frogs eat the cheese?"
 
