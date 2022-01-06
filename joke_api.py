@@ -41,37 +41,55 @@ def class_tokenize_function(example):
     return class_tokenizer(q, a, padding="max_length", max_length=60, truncation=True)
 
 
-def get_punchline(input_text, vanilla_gpt2=False, best_of=5):
+def get_punchline(input_text, vanilla_gpt2=False, max_tries=None, threshold=None):
     '''
     Given a text prompt (setup) for a joke, provide an NLP-generated punchline.
     '''
+    if USE_GPU:
+        if max_tries == None:
+            max_tries = 10
+        if threshold == None:
+            threshold = 0.985
+    else:
+        if max_tries == None:
+            max_tries = 3
+        if threshold == None:
+            threshold = 0.9
+    
     # Format the prompts as "Question: XX Answer: "
-    prompt = 'Question: ' + input_text + ' Answer:'
-    # Duplicate the prompt as many times as requested
-    prompts = [prompt] * best_of
+    prompts = ['Question: ' + input_text + ' Answer:']
 
     # Choose between vanilla GPT-2 or fine-tuned model
     gen_mod = gen_model if vanilla_gpt2 else gen_model_ft
 
-    # Generate n versions of the punchline to choose between
-    raw_gentext = mtools.generate(gen_mod, gen_tokenizer, prompts, use_gpu=USE_GPU)
-    gentext = [x.replace(gen_tokenizer.eos_token,'').replace('\n',' ').strip() for x in raw_gentext]
-    punchlines = [x[x.find('Answer:')+len('Answser:'):] for x in gentext]
-    
-    # Tokenize them for the classifier
-    gentext_dataset = Dataset.from_dict({'gentext': gentext})
-    tokenized_gentext = gentext_dataset.map(class_tokenize_function, batched=True)
-    tokenized_gentext = tokenized_gentext.remove_columns(["gentext"])
-    tokenized_gentext.set_format("torch")
+    # Generate punchlines until max tries or > thresh
+    best_score = best_punch = -1
+    for i in range(max_tries):
+        print (f"---------------ITERATION: {i}-----------------")
+        raw_gentext = mtools.generate(gen_mod, gen_tokenizer, prompts, use_gpu=USE_GPU)
+        gentext = [x.replace(gen_tokenizer.eos_token,'').replace('\n',' ').strip() for x in raw_gentext]
+        punchlines = [x[x.find('Answer:')+len('Answser:'):] for x in gentext]
 
-    # Use the classifier to get predictions (1 = real joke, 0 = fake joke) 
-    #     and probability of being a "real" joke (from 0.00 to 1.00)
-    preds, probs = mtools.classify_punchlines(tokenized_gentext, class_model, return_prob=True,
-                                              batch_size=best_of, use_gpu=USE_GPU)
-    
-    print('Best punchline score = {}'.format(np.max(probs)))
-    # Return the punchline that has the highest probability
-    return punchlines[np.argmax(probs)]
+        # Tokenize them for the classifier
+        gentext_dataset = Dataset.from_dict({'gentext': gentext})
+        tokenized_gentext = gentext_dataset.map(class_tokenize_function, batched=True)
+        tokenized_gentext = tokenized_gentext.remove_columns(["gentext"])
+        tokenized_gentext.set_format("torch")
+
+        # Use the classifier to get predictions (1 = real joke, 0 = fake joke) 
+        #     and probability of being a "real" joke (from 0.00 to 1.00)
+        preds, probs = mtools.classify_punchlines(tokenized_gentext, class_model, return_prob=True,
+                                                  batch_size=1, use_gpu=USE_GPU)
+        score = probs[0]
+        print(f"Score: {score} Punchline: {punchlines[0]}")
+        if score > best_score:
+            best_score = score
+            best_punch = punchlines[0]
+        if score >= threshold:
+            print ("threshold reached, returning")
+            break
+        # Return the punchline that has the highest probability
+    return best_punch
 
 
 if __name__ == "__main__":
@@ -84,17 +102,6 @@ if __name__ == "__main__":
     setup = "Why did frogs eat the cheese?"
 
     print ("Q:", setup)
-    punchline = get_punchline(setup, best_of=3)
+    punchline = get_punchline(setup, max_tries=10)
     print ("A:", punchline)
     print ()
-
-    print ("Q:", setup)
-    punchline = get_punchline(setup, best_of=2)
-    print ("A:", punchline)
-    print ()
-
-    print ("Q:", setup)
-    punchline = get_punchline(setup, best_of=1)
-    print ("A:", punchline)
-    print ()
-
