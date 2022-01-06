@@ -4,7 +4,7 @@ import numpy as np
 
 import model_tools as mtools
 
-USE_GPU = torch.cuda.is_available()
+USE_GPU = False # torch.cuda.is_available()
 
 generator_filename = 'models/JokeGen_gpt2_1.00subset_3epochs_2022-01-05.pt'
 classifier_filename = 'models/ClassifyJokes_bert_1.00subset_2021-12-16.pt'
@@ -48,7 +48,7 @@ def get_punchline(input_text, vanilla_gpt2=False, best_of=5):
     gen_mod = gen_model if vanilla_gpt2 else gen_model_ft
 
     # Generate n versions of the punchline to choose between
-    raw_gentext = mtools.generate(gen_mod, gen_tokenizer, prompts)
+    raw_gentext = mtools.generate(gen_mod, gen_tokenizer, prompts, use_gpu=USE_GPU)
     gentext = [x.replace(gen_tokenizer.eos_token,'').replace('\n',' ').strip() for x in raw_gentext]
     punchlines = [x[x.find('Answer:')+len('Answser:'):] for x in gentext]
     
