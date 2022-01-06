@@ -69,16 +69,20 @@ def get_punchline(input_text, vanilla_gpt2=False, best_of=5):
 
 if __name__ == "__main__":
     print ("------------------------------------------------------------------")
-    setup = "Why did the chicken cross the road?"
-    for i in range(111):
-        print ("Q:", setup)
-        punchline = get_punchline(setup)
-        print ("A:", punchline)
-        print ()
-        # setup = input("Q:")
-        if i < 2:
-            setup = "Knock knock. Who's there?"
-        else:
-            setup = input("Type joke here (or <enter> to quit)")
-            if not setup.strip():
-                break
+    setup = "Why did frogs eat the cheese?"
+
+    print ("Q:", setup)
+    punchline = get_punchline(setup, best_of=3)
+    print ("A:", punchline)
+    print ()
+
+    print ("Q:", setup)
+    punchline = get_punchline(setup, best_of=2)
+    print ("A:", punchline)
+    print ()
+
+    print ("Q:", setup)
+    punchline = get_punchline(setup, best_of=1)
+    print ("A:", punchline)
+    print ()
+
