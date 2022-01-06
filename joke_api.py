@@ -4,29 +4,35 @@ import numpy as np
 
 import model_tools as mtools
 
-USE_GPU = False # torch.cuda.is_available()
+def init(use_gpu = "AUTOMATIC",
+         generator_filename = 'models/JokeGen_gpt2_1.00subset_3epochs_2022-01-05.pt',
+         classifier_filename = 'models/ClassifyJokes_bert_1.00subset_2021-12-16.pt'):
+    global gen_model, gen_model_ft, gen_tokenizer, class_model, class_tokenizer
 
-generator_filename = 'models/JokeGen_gpt2_1.00subset_3epochs_2022-01-05.pt'
-classifier_filename = 'models/ClassifyJokes_bert_1.00subset_2021-12-16.pt'
+    global USE_GPU
+    if use_gpu == "AUTOMATIC":
+        USE_GPU = torch.cuda.is_available()
+    else:
+        USE_GPU = use_gpu
 
-#-------------------------------------
-# Load the NLP Models
-#-------------------------------------
+    #-------------------------------------
+    # Load the NLP Models
+    #-------------------------------------
 
-# Load the vanilla generator model, plus its tokenizer
-gen_checkpoint, gen_tokenizer, gen_model = mtools.load_model('gpt2')  
-# Load the fine-tuned generator
-gen_model_ft = torch.load(generator_filename, map_location=torch.device('cpu'))
+    # Load the vanilla generator model, plus its tokenizer
+    gen_checkpoint, gen_tokenizer, gen_model = mtools.load_model('gpt2')  
+    # Load the fine-tuned generator
+    gen_model_ft = torch.load(generator_filename, map_location=torch.device('cpu'))
 
-# Load the vanilla BERT model, plus its tokenizer
-class_checkpoint, class_tokenizer, temp_model = mtools.load_model('bert')
-# Load our trained classifier
-class_model = torch.load(classifier_filename, map_location=torch.device('cpu'))
+    # Load the vanilla BERT model, plus its tokenizer
+    class_checkpoint, class_tokenizer, temp_model = mtools.load_model('bert')
+    # Load our trained classifier
+    class_model = torch.load(classifier_filename, map_location=torch.device('cpu'))
 
-# Put all models on the specified device (GPU or CPU)
-gen_model, device = mtools.set_device(gen_model, use_gpu=USE_GPU)
-gen_model_ft, device = mtools.set_device(gen_model_ft, use_gpu=USE_GPU)
-class_model, device = mtools.set_device(class_model, use_gpu=USE_GPU)
+    # Put all models on the specified device (GPU or CPU)
+    gen_model, device = mtools.set_device(gen_model, use_gpu=USE_GPU)
+    gen_model_ft, device = mtools.set_device(gen_model_ft, use_gpu=USE_GPU)
+    class_model, device = mtools.set_device(class_model, use_gpu=USE_GPU)
 
 
 def class_tokenize_function(example):
@@ -69,6 +75,7 @@ def get_punchline(input_text, vanilla_gpt2=False, best_of=5):
 
 
 if __name__ == "__main__":
+    init()
     print ("------------------------------------------------------------------")
     setup = "Why did frogs eat the cheese?"
 
