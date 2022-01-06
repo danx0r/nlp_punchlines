@@ -72,7 +72,7 @@ if __name__ == "__main__":
     setup = "Why did the chicken cross the road?"
     for i in range(111):
         print ("Q:", setup)
-        punchline = get_punchline(setup, best_of=3)
+        punchline = get_punchline(setup)
         print ("A:", punchline)
         print ()
         # setup = input("Q:")
