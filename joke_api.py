@@ -7,9 +7,8 @@ import model_tools as mtools
 def init(use_gpu = "AUTOMATIC",
          generator_filename = 'models/JokeGen_gpt2_1.00subset_3epochs_2022-01-05.pt',
          classifier_filename = 'models/ClassifyJokes_bert_1.00subset_2021-12-16.pt'):
-    global gen_model, gen_model_ft, gen_tokenizer, class_model, class_tokenizer
+    global gen_model, gen_model_ft, gen_tokenizer, class_model, class_tokenizer, USE_GPU
 
-    global USE_GPU
     if use_gpu == "AUTOMATIC":
         USE_GPU = torch.cuda.is_available()
     else:
@@ -46,11 +45,13 @@ def get_punchline(input_text, vanilla_gpt2=False, max_tries=None, threshold=None
     Given a text prompt (setup) for a joke, provide an NLP-generated punchline.
     '''
     if USE_GPU:
+        print ("USE_GPU")
         if max_tries == None:
             max_tries = 10
         if threshold == None:
             threshold = 0.985
     else:
+        print ("USE_CPU")
         if max_tries == None:
             max_tries = 3
         if threshold == None:
@@ -102,6 +103,6 @@ if __name__ == "__main__":
     setup = "Why did frogs eat the cheese?"
 
     print ("Q:", setup)
-    punchline = get_punchline(setup, max_tries=10)
+    punchline = get_punchline(setup)
     print ("A:", punchline)
     print ()
