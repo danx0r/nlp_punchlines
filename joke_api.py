@@ -35,7 +35,8 @@ def class_tokenize_function(example):
     return class_tokenizer(q, a, padding="max_length", max_length=60, truncation=True)
 
 
-def get_punchline(input_text, vanilla_gpt2=False, best_of=5):
+def get_punchline(input_text, vanilla_gpt2=False, 
+                  best_of=5):
     '''
     Given a text prompt (setup) for a joke, provide an NLP-generated punchline.
     '''

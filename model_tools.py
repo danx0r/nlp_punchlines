@@ -64,7 +64,7 @@ def pack_tensor(new_tensor, packed_tensor, max_seq_len):
         return packed_tensor, True, None
     
     
-def set_device(model, use_gpu=True):
+def set_device(model, use_gpu=True, quiet=False):
     # Use GPU device if requested (default: use_gpu=True) and it is available
     device = torch.device("cpu")
     if use_gpu:
@@ -73,11 +73,12 @@ def set_device(model, use_gpu=True):
         else:
             print('No GPU available!')
     model.to(device)    # Put model on the requested device (default=GPU if avaiable)
-    print('Running on {}'.format(model.device))    
+    if not quiet:
+        print('Running on {}'.format(model.device))    
     return model, model.device
     
     
-def train_classifier(dataset, model, use_gpu=True,
+def train_classifier(dataset, model, use_gpu=True, 
                      batch_size=8, epochs=3, lr=5e-5,
                      warmup_steps=0,
                      output_dir="./checkpoints/", output_prefix="temp_classifier",
@@ -135,17 +136,18 @@ def train_classifier(dataset, model, use_gpu=True,
     return model
 
 
-def classify_punchlines(dataset, model, 
+def classify_punchlines(dataset, model, quiet=False,
                         use_gpu=True, batch_size=8,
                         return_prob=False):
     
     # Put model on the correct device
-    model, device = set_device(model, use_gpu=use_gpu)
+    model, device = set_device(model, use_gpu=use_gpu, quiet=quiet)
     model.eval()   # Put the model into "eval" mode
-    
+
     eval_dataloader = DataLoader(dataset, batch_size=batch_size)
-    print('{} batches to process (batch_size={})'.format(len(eval_dataloader),batch_size))
-    progress_bar = tqdm(range(len(eval_dataloader)))
+    if not quiet:
+        print('{} batches to process (batch_size={})'.format(len(eval_dataloader),batch_size))
+        progress_bar = tqdm(range(len(eval_dataloader)))
 
     predictions = []; probs = []
     for batch in eval_dataloader:
@@ -162,7 +164,8 @@ def classify_punchlines(dataset, model,
             if probs_i.device != 'cpu':
                 probs_i = probs_i.to(device='cpu')
             probs.extend(list([p[-1] for p in probs_i.numpy()]))
-        progress_bar.update(1)
+        if not quiet:
+            progress_bar.update(1)
 
     if return_prob:
         return predictions, probs
@@ -187,7 +190,9 @@ def train_generator(train_dataset, model, use_gpu=True,
  
     acc_steps = 100
     optimizer = AdamW(model.parameters(), lr=lr)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=-1)
+    scheduler = get_linear_schedule_with_warmup(optimizer, 
+                                                num_warmup_steps=warmup_steps, 
+                                                num_training_steps=-1)
 
     loss=0
     accumulating_batch_count = 0
@@ -203,6 +208,8 @@ def train_generator(train_dataset, model, use_gpu=True,
             if carry_on and idx != len(train_dataloader) - 1:
                 continue
             input_tensor = input_tensor.to(device)
+            # For a generator, we use the input text itself as the labels --> the generator
+            #     at each word is trying to predict what word comes next.  
             outputs = model(input_tensor, labels=input_tensor)
             loss = outputs[0]
             loss.backward()
@@ -223,7 +230,7 @@ def train_generator(train_dataset, model, use_gpu=True,
 
 
 def generate(model, tokenizer, prompts,
-             use_gpu=True,
+             use_gpu=True, quiet=False,
              maxlength=30, # maximum number of words in newly generated text
              top_p=0.8, temperature=1.):
     '''
@@ -246,7 +253,8 @@ def generate(model, tokenizer, prompts,
             print('No GPU available!')
     model.eval()        # Put model in "eval" mode
     model.to(device)    # Put model on the requested device (default=GPU if avaiable)
-    print('Running on {}'.format(model.device))
+    if not quiet:
+        print('Running on {}'.format(model.device))
     
     with torch.no_grad():
         
