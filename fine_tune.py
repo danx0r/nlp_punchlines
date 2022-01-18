@@ -63,9 +63,9 @@ def fine_tune(train_files, use_model="gpt2", downsample=1, nepochs=3):
     model = mtools.train_generator(train_dataset, model, tokenizer, epochs=nepochs)
 
     if os.path.exists('models') is False: os.mkdir('models')
-    basename = 'models/JokeGen_{}_'.format(use_model)
-    runname = '{:4.2f}subset_{}epochs_{}'.format(1./downsample,nepochs,datetime.now().date())
-    filename = basename + runname + '.pt'
+    basename = 'models/JokeGen_{}'.format(use_model)
+    #runname = '{:4.2f}subset_{}epochs_{}'.format(1./downsample,nepochs,datetime.now().date())
+    filename = basename + '.pt'
     print('Saving model as {}'.format(filename))
     torch.save(model,filename)
     

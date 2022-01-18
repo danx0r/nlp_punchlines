@@ -56,8 +56,7 @@ def train_punchline_classifier(train_files, test_files, downsample=1):
     model = mtools.train_classifier(tokenized_datasets, model, epochs=3)
     
     # Save the trained model
-    filename = 'models/ClassifyJokes_{}_{:4.2f}subset_{}'.format(checkpoint.split('/')[-1].split('-')[0], 
-                                                                 1.0/downsample, datetime.now().date())+'.pt'
+    filename = 'models/ClassifyJokes_{}.pt'.format(checkpoint.split('/')[-1].split('-')[0])
     print('Saving model as {}'.format(filename))
     torch.save(model,filename)
         
@@ -83,5 +82,3 @@ if __name__ == "__main__":
     print(' Using these files for testing data: {}'.format(test_files))
     
     train_punchline_classifier(train_files, test_files, downsample=args.downsample)
-    
-    
