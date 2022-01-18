@@ -1,4 +1,4 @@
-import os
+import os, sys
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
@@ -202,8 +202,9 @@ def train_generator(train_dataset, model, use_gpu=True,
 
         print(f"Training epoch {epoch}")
         print(loss)
-        
-        for idx, entry in tqdm(enumerate(train_dataloader)):
+        progress_bar = tqdm(range(len(train_dataloader)))
+        for idx, entry in enumerate(train_dataloader):
+            progress_bar.update(1)
             (input_tensor, carry_on, remainder) = pack_tensor(entry, input_tensor, 768)
             if carry_on and idx != len(train_dataloader) - 1:
                 continue
