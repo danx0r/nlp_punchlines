@@ -201,7 +201,6 @@ def train_generator(train_dataset, model, use_gpu=True,
     for epoch in range(epochs):
 
         print(f"Training epoch {epoch}")
-        print(loss)
         progress_bar = tqdm(range(len(train_dataloader)))
         for idx, entry in enumerate(train_dataloader):
             progress_bar.update(1)
