@@ -202,8 +202,10 @@ def train_generator(train_dataset, model, use_gpu=True,
 
         print(f"Training epoch {epoch}")
         print(loss)
+
+        progress_bar = tqdm(enumerate(train_dataloader))
         
-        for idx, entry in tqdm(enumerate(train_dataloader)):
+        for idx, entry in enumerate(train_dataloader):
             (input_tensor, carry_on, remainder) = pack_tensor(entry, input_tensor, 768)
             if carry_on and idx != len(train_dataloader) - 1:
                 continue
@@ -213,6 +215,7 @@ def train_generator(train_dataset, model, use_gpu=True,
             outputs = model(input_tensor, labels=input_tensor)
             loss = outputs[0]
             loss.backward()
+            progress_bar.update(1)            
             if (accumulating_batch_count % batch_size) == 0:
                 optimizer.step()
                 scheduler.step()
