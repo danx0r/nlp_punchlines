@@ -28,6 +28,10 @@ def tokenize_function(example):
 def train_punchline_classifier(train_files, test_files, downsample=1):
     global tokenizer
 
+    # Check that a data/ dir exists for output and make one if needed
+    if os.path.exists('models') is False:
+        os.mkdir('models')
+    
     # Load the specified train and test datasets
     dataset = load_dataset('csv', data_files={'train':train_files,'test':test_files})
     

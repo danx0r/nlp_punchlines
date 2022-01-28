@@ -132,6 +132,10 @@ def train_classifier(dataset, model, use_gpu=True,
         losses.append(loss)        
         if save_model_on_epoch:
             torch.save(model.state_dict(),os.path.join(output_dir, f"{output_prefix}-{epoch}.pt"))
+
+    print('Done training model.  Final model has:')
+    print('       Accuracy: {}'.format(temp['accuracy']))
+    print('             F1: {}'.format(temp['f1']))
         
     return model
 

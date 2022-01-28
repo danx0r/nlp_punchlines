@@ -1,8 +1,15 @@
+import os
 import pandas as pd
 import argparse
 
-def clean_data(file='data/one-million-reddit-jokes.csv'):
+default_path = '/opt/tljh/user/share/nlp_punchlines_data/one-million-reddit-jokes.csv'
 
+def clean_data(file=default_path):
+
+    # Check that a data/ dir exists for output and make one if needed
+    if os.path.exists('data') is False:
+        os.mkdir('data')
+    
     #-----------------------------------
     # Read in the Reddit jokes data
     #-----------------------------------
@@ -66,7 +73,8 @@ def clean_data(file='data/one-million-reddit-jokes.csv'):
     for dset,name in [(jokes,'_all'),
                       (jokes_train, '_train'),
                       (jokes_test,'_test'),
-                      (jokes_test.iloc[:mini_count],'_minitest')]:
+                      (jokes_train.iloc[:int(mini_count*train_frac)],'_minitrain'),
+                      (jokes_test.iloc[:int(mini_count*(1-train_frac))],'_minitest')]:
         dset[output_columns].to_csv(outfile.replace('.csv',name+'.csv'), header=True, index=False)
         print('{:>10} in {}'.format(dset.shape[0],outfile.replace('.csv',name+'.csv')))
         
@@ -77,7 +85,7 @@ if __name__ == "__main__":
     
     # Get command-line arguments
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('file', type=str, default=None, 
+    parser.add_argument('--file', type=str, default=default_path, 
                         help='input data file path')
     args = parser.parse_args()
 
