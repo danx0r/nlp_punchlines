@@ -232,7 +232,6 @@ def train_generator(train_dataset, model, use_gpu=True,
     return model
 
 
-
 def generate(model, tokenizer, prompts,
              use_gpu=True, quiet=False,
              maxlength=30, # maximum number of words in newly generated text
@@ -249,16 +248,8 @@ def generate(model, tokenizer, prompts,
         prompts = [prompts]
 
     # Use GPU device if requested (default: use_gpu=True) and it is available
-    device = torch.device("cpu")
-    if use_gpu:
-        if torch.cuda.is_available():
-            device = torch.device("cuda:0")
-        else:
-            print('No GPU available!')
     model.eval()        # Put model in "eval" mode
-    model.to(device)    # Put model on the requested device (default=GPU if avaiable)
-    if not quiet:
-        print('Running on {}'.format(model.device))
+    model, device = set_device(model, use_gpu=use_gpu, quiet=quiet)
     
     with torch.no_grad():
         
