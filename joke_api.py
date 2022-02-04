@@ -19,19 +19,22 @@ def init(use_gpu = "AUTOMATIC",
     #-------------------------------------
 
     # Load the vanilla generator model, plus its tokenizer
-    gen_checkpoint, gen_tokenizer, gen_model = mtools.load_model('gpt2')  
-    # Load the fine-tuned generator
+    gen_checkpoint = mtools.load_checkpoint('gpt2')
+    gen_tokenizer = mtools.load_tokenizer(gen_checkpoint)
+    gen_model = mtools.load_model(gen_checkpoint)
+    # Load the fine-tuned generator, always load to CPU first
     gen_model_ft = torch.load(generator_filename, map_location=torch.device('cpu'))
 
-    # Load the vanilla BERT model, plus its tokenizer
-    class_checkpoint, class_tokenizer, temp_model = mtools.load_model('bert')
-    # Load our trained classifier
+    # Load the vanilla BERT tokenizer
+    class_checkpoint = mtools.load_model('bert')
+    class_tokenizer = mtools.load_tokenizer(class_checkpoint)
+    # Load our trained BERT classifier
     class_model = torch.load(classifier_filename, map_location=torch.device('cpu'))
 
     # Put all models on the specified device (GPU or CPU)
-    gen_model, device = mtools.set_device(gen_model, use_gpu=USE_GPU)
-    gen_model_ft, device = mtools.set_device(gen_model_ft, use_gpu=USE_GPU)
-    class_model, device = mtools.set_device(class_model, use_gpu=USE_GPU)
+    gen_model.to(get_device(use_gpu=USE_GPU))
+    gen_model_ft.to(get_device(use_gpu=USE_GPU))
+    class_model.to(get_device(use_gpu=USE_GPU))
 
 
 def class_tokenize_function(example):

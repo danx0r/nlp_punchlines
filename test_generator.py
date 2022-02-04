@@ -20,19 +20,19 @@ def load_all_models(generator_filename=None, classifier_filename=None, use_gpu=T
 
     # Load the vanilla BERT model, plus its tokenizer
     print('Load the classifier...')
-    classifier_checkpoint, classifier_tokenizer, temp_model = mtools.load_model('bert')
-    # Load our trained classifier and put it onto the GPU
+    classifier_checkpoint = mtools.load_checkpoint('bert')
+    classifier_tokenizer = mtools.load_tokenizer(classifier_checkpoint)
+    # Load our trained classifier
     classifier_model = torch.load(classifier_filename, map_location=torch.device('cpu'))
-    classifier_model, device = mtools.set_device(classifier_model, use_gpu=use_gpu)
 
     # Load the original GPT-2 model and its tokenizer, and put it on the GPU
     print('Load vanilla GPT-2...')
-    checkpoint, generator_tokenizer, gpt2_model = mtools.load_model('gpt2')    
-    gpt2_model, device = mtools.set_device(gpt2_model, use_gpu=use_gpu)
-    # Load our fine-tuned model and put it on the GPU
+    generator_checkpoint = mtools.load_checkpoint('gpt2')
+    generator_tokenizer = mtools.load_tokenizer(generator_checkpoint)
+    gpt2_model = mtools.load_model(generator_checkpoint)
+    # Load our fine-tuned model
     print('Load fine-tuned generator...')
     ft_model = torch.load(generator_filename, map_location=torch.device('cpu'))
-    ft_model, device = mtools.set_device(ft_model, use_gpu=use_gpu)
     
     print('Models are ready.')    
     return

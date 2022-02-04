@@ -25,14 +25,17 @@ def add_fake_punchlines(infile, start_i=0):
     df['full_qa'] = df.apply(lambda x: dtools.joke_as_qa(x['setup'], x['punchline']), axis=1)
     df['prompt'] = df['full_qa'].apply(lambda x: x[:x.find('Answer: ')+len('Answer:')])    
     
-    checkpoint, tokenizer, model = mtools.load_model('gpt2')
+    checkpoint = mtools.load_checkpoint('gpt2')
+    tokenizer = mtools.load_tokenizer(checkpoint)
+    model = mtools.load_model(checkpoint)
     
     # Iterate through the input "real" jokes in batches, get a "fake" punchline for each joke
     nlines = df.shape[0]
     t0 = datetime.now()
     for i in range(start_i, nlines, BATCHSIZE):          
         
-        print('Working on jokes {}:{} out of {} -- {}'.format(i,i+BATCHSIZE,nlines,datetime.now()-t0))
+        print('Working on jokes {}:{} out of {} -- {}'.format(i,i+BATCHSIZE,
+                                                              nlines,datetime.now()-t0))
         
         # Get the next batch of jokes
         df_i = df.iloc[i:i+BATCHSIZE]

@@ -41,14 +41,17 @@ def fine_tune(train_files, use_model="gpt2", downsample=1, nepochs=3):
     dataset = load_dataset('csv', data_files={'train':train_files})
     
     # Remove any badly-formatted data and downsample, if requested
-    dataset = dataset.filter(lambda ex,j: ((type(ex['setup'])==str) & (type(ex['punchline'])==str) & 
+    dataset = dataset.filter(lambda ex,j: ((type(ex['setup'])==str) & 
+                                           (type(ex['punchline'])==str) & 
                                            (j%downsample==0)),                         
                              with_indices=True)    
     added_text = ' ({}x downsampled)'.format(downsample) if downsample!=1 else ''
     print('{} rows in the train dataset'.format(dataset['train'].num_rows)+added_text+'.')
     
     # Load the pre-trained model, checkpoint, and corresponding tokenizer we want to use
-    checkpoint, tokenizer, model = mtools.load_model(use_model)    
+    checkpoint = mtools.load_checkpoint(use_model)
+    tokenizer = mtools.load_tokenizer(checkpoint)
+    model = mtools.load_model(checkpoint)
 
     # Tokenize the dataset
     tokenized_datasets = dataset.map(tokenize_function, batched=True)

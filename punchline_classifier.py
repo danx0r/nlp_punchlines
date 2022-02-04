@@ -44,7 +44,9 @@ def train_punchline_classifier(train_files, test_files, downsample=1):
     print('{} rows in the test dataset'.format(dataset['test'].num_rows)+added_text+'.')
 
     # Load the pre-trained BERT model checkpoint and associated tokenizer
-    checkpoint, tokenizer, model = mtools.load_model('bert')    
+    checkpoint = mtools.load_checkpoint('bert')
+    tokenizer = mtools.load_tokenizer(checkpoint)
+    model = mtools.load_model(checkpoint)
 
     # Tokenize the dataset
     tokenized_datasets = dataset.map(tokenize_function, batched=True)

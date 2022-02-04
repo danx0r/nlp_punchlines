@@ -11,17 +11,12 @@ from transformers import AdamW, get_scheduler, get_linear_schedule_with_warmup
 from tqdm import tqdm, trange
 
 
-def load_model(model_name):
-
+def load_checkpoint(model_name):
+    # Map model shortcut names onto full HuggingFace model names
     model_map = {'gpt2':'gpt2', 
                  'bart':'facebook/bart-base', 
                  'bert':'bert-base-uncased', 
                  't5':'t5-base'}
-    automodel_map = {'gpt2': AutoModelForCausalLM,
-                     'facebook/bart-base': AutoModelForSeq2SeqLM,
-                     'bert-base-uncased': AutoModelForSequenceClassification,
-                     't5-base': AutoModelForSeq2SeqLM}
-    
     if model_name in model_map.values():
         checkpoint = model_name
     elif model_name in model_map.keys():
@@ -30,27 +25,44 @@ def load_model(model_name):
         print('Model not in recognized set.  Please choose a model from this list:')
         for k,v in model_map.items():
             print('   {} (uses "{}" checkpoint)'.format(k,v))
-        return None, None, None
-
+        return None
     print('Using checkpoint "{}"'.format(checkpoint))
-    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
-    AutoModel = automodel_map[checkpoint]
-    model = AutoModel.from_pretrained(checkpoint)
+    return checkpoint
 
+
+def load_tokenizer(checkpoint):
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)
     # If no End-Of-String token, create one
     # If no Beginning-Of-String or Pad token, make them match EOS
     if tokenizer.eos_token is None:
         print('Warning: no EOS token detected.  Adding an EOS token')
         tokenizer.eos_token = '<eos>'
-        model.config.eos_token_id = tokenizer.eos_token_id
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
-        model.config.pad_token_id = tokenizer.pad_token_id
     if tokenizer.bos_token is None:
         tokenizer.bos_token = tokenizer.eos_token
-        model.config.bos_token_id = tokenizer.eos_token_id
+    return tokenizer
 
-    return checkpoint, tokenizer, model
+
+def load_model(checkpoint):
+    # Map checkpoint names to the AutoModel type they will work with
+    automodel_map = {'gpt2': AutoModelForCausalLM,
+                     'facebook/bart-base': AutoModelForSeq2SeqLM,
+                     'bert-base-uncased': AutoModelForSequenceClassification,
+                     't5-base': AutoModelForSeq2SeqLM}    
+    tokenizer = AutoTokenizer.from_pretrained(checkpoint)    
+    AutoModel = automodel_map[checkpoint]
+    model = AutoModel.from_pretrained(checkpoint)
+    # If no End-Of-String token, create one
+    # If no Beginning-Of-String or Pad token, make them match EOS
+    if tokenizer.eos_token is None:
+        print('Warning: no EOS token detected.  Adding an EOS token')
+        model.config.eos_token_id = tokenizer.eos_token_id
+    if tokenizer.pad_token is None:
+        model.config.pad_token_id = tokenizer.pad_token_id
+    if tokenizer.bos_token is None:
+        model.config.bos_token_id = tokenizer.eos_token_id
+    return model
 
 
 # Accumulated batch size (since GPT2 is so big)
@@ -64,7 +76,7 @@ def pack_tensor(new_tensor, packed_tensor, max_seq_len):
         return packed_tensor, True, None
     
     
-def set_device(model, use_gpu=True, quiet=False):
+def get_device(use_gpu=True, quiet=False):
     # Use GPU device if requested (default: use_gpu=True) and it is available
     device = torch.device("cpu")
     if use_gpu:
@@ -72,10 +84,7 @@ def set_device(model, use_gpu=True, quiet=False):
             device = torch.device("cuda:0")
         else:
             print('No GPU available!')
-    model.to(device)    # Put model on the requested device (default=GPU if avaiable)
-    if not quiet:
-        print('Running on {}'.format(model.device))    
-    return model, model.device
+    return device
     
     
 def train_classifier(dataset, model, use_gpu=True, 
@@ -88,8 +97,6 @@ def train_classifier(dataset, model, use_gpu=True,
     if os.path.exists(output_dir) is False:
         os.mkdir(output_dir)
 
-    model, device = set_device(model, use_gpu=use_gpu)
-    
     train_dataloader = DataLoader(dataset["train"], shuffle=True, batch_size=8)
     eval_dataloader = DataLoader(dataset["test"], batch_size=8)
     
@@ -99,6 +106,8 @@ def train_classifier(dataset, model, use_gpu=True,
                                  num_warmup_steps=warmup_steps,
                                  num_training_steps=nsteps)
     metric= load_metric("glue", "mrpc")
+    
+    model.to(get_device(use_gpu=use_gpu))   
 
     progress_bar = tqdm(range(nsteps))
     losses = []
@@ -107,7 +116,7 @@ def train_classifier(dataset, model, use_gpu=True,
         # Trainining pass 
         model.train()  # Put the model into "training" mode
         for batch in train_dataloader:
-            batch = {k: v.to(device) for k, v in batch.items()}
+            batch = {k: v.to(model.device) for k, v in batch.items()}
             outputs = model(**batch)
             loss = outputs.loss
             loss.backward()
@@ -119,7 +128,7 @@ def train_classifier(dataset, model, use_gpu=True,
         # Evaluate this epoch
         model.eval()   # Put the model into "eval" mode
         for batch in eval_dataloader:
-            batch = {k: v.to(device) for k, v in batch.items()}
+            batch = {k: v.to(model.device) for k, v in batch.items()}
             with torch.no_grad():
                 outputs = model(**batch)
             logits = outputs.logits
@@ -136,7 +145,9 @@ def train_classifier(dataset, model, use_gpu=True,
     print('Done training model.  Final model has:')
     print('       Accuracy: {}'.format(temp['accuracy']))
     print('             F1: {}'.format(temp['f1']))
-        
+    
+    model.to(device='cpu')  # Put model back on CPU to free up GPU
+
     return model
 
 
@@ -145,7 +156,7 @@ def classify_punchlines(dataset, model, quiet=False,
                         return_prob=False):
     
     # Put model on the correct device
-    model, device = set_device(model, use_gpu=use_gpu, quiet=quiet)
+    model.to(get_device(use_gpu=use_gpu, quiet=quiet))
     model.eval()   # Put the model into "eval" mode
 
     eval_dataloader = DataLoader(dataset, batch_size=batch_size)
@@ -155,22 +166,19 @@ def classify_punchlines(dataset, model, quiet=False,
 
     predictions = []; probs = []
     for batch in eval_dataloader:
-        batch = {k: v.to(device) for k, v in batch.items()}
+        batch = {k: v.to(model.device) for k, v in batch.items()}
         with torch.no_grad():
             outputs = model(**batch)
         logits = outputs.logits
-        predictions_i = torch.argmax(logits, dim=-1)
-        if predictions_i.device != 'cpu':
-            predictions_i = predictions_i.to(device='cpu')
+        predictions_i = torch.argmax(logits, dim=-1).to(device='cpu') # output data on CPU
         predictions.extend(list(predictions_i.numpy()))
         if return_prob==True:
-            probs_i = F.softmax(outputs.logits, dim=-1)
-            if probs_i.device != 'cpu':
-                probs_i = probs_i.to(device='cpu')
+            probs_i = F.softmax(outputs.logits, dim=-1).to(device='cpu')
             probs.extend(list([p[-1] for p in probs_i.numpy()]))
         if not quiet:
             progress_bar.update(1)
-
+    model.to(device='cpu')   # Put model back on CPU to free up GPU
+            
     if return_prob:
         return predictions, probs
     else:
@@ -189,7 +197,8 @@ def train_generator(train_dataset, model, use_gpu=True,
 
     train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True)
 
-    model, device = set_device(model, use_gpu=use_gpu)
+    # Put model on GPU, if available
+    model.to(get_device(use_gpu=use_gpu))
     model.train()  # Put model in "train" mode
  
     acc_steps = 100
@@ -205,13 +214,13 @@ def train_generator(train_dataset, model, use_gpu=True,
     for epoch in range(epochs):
 
         print(f"Training epoch {epoch}")
-        progress_bar = tqdm(range(len(train_dataloader)))
+        progress_bar = tqdm(range(len(train_dataloader)), position=0, leave=True)
         for idx, entry in enumerate(train_dataloader):
             progress_bar.update(1)
             (input_tensor, carry_on, remainder) = pack_tensor(entry, input_tensor, 768)
             if carry_on and idx != len(train_dataloader) - 1:
                 continue
-            input_tensor = input_tensor.to(device)
+            input_tensor = input_tensor.to(model.device)
             # For a generator, we use the input text itself as the labels --> the generator
             #     at each word is trying to predict what word comes next.  
             outputs = model(input_tensor, labels=input_tensor)
@@ -229,6 +238,9 @@ def train_generator(train_dataset, model, use_gpu=True,
                 model.state_dict(),
                 os.path.join(output_dir, f"{output_prefix}-{epoch}.pt"),
             )
+            
+    model.to(device='cpu')  # Put model back on CPU to free up GPU
+    
     return model
 
 
@@ -248,8 +260,8 @@ def generate(model, tokenizer, prompts,
         prompts = [prompts]
 
     # Use GPU device if requested (default: use_gpu=True) and it is available
+    model.to(get_device(use_gpu=use_gpu))
     model.eval()        # Put model in "eval" mode
-    model, device = set_device(model, use_gpu=use_gpu, quiet=quiet)
     
     with torch.no_grad():
         
@@ -258,7 +270,7 @@ def generate(model, tokenizer, prompts,
 
             # Token string starts with tokenized input, on same device as the model
             gentokens = torch.tensor(encode_prompt(prompts[i],tokenizer)).unsqueeze(0)
-            gentokens = gentokens.to(device)
+            gentokens = gentokens.to(model.device)
 
             # Now generate additional tokens up to maxlength
             for j in range(maxlength):
@@ -295,8 +307,11 @@ def generate(model, tokenizer, prompts,
             output_text = tokenizer.decode(output_tokens)
             output_list.append(output_text)
 
+    model.to(device='cpu')  # Put model back onto CPU to free up GPU
+    
     if str_input:
         output_list = output_list[0]
+        
     return output_list
 
 
