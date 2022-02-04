@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
+from burst_tools import gpumem
 from datasets import load_metric
 from transformers import AutoTokenizer
 from transformers import AutoModelForSequenceClassification
@@ -77,13 +78,15 @@ def pack_tensor(new_tensor, packed_tensor, max_seq_len):
     
     
 def get_device(use_gpu=True, quiet=False):
-    # Use GPU device if requested (default: use_gpu=True) and it is available
-    device = torch.device("cpu")
+    # If GPU was requested, find the one with most free memory
     if use_gpu:
-        if torch.cuda.is_available():
-            device = torch.device("cuda:0")
+        best, free = gpumem.least_used()
+        if best is None:
+            raise Exception("GPU unavailable")
         else:
-            print('No GPU available!')
+            device = torch.device("cuda:{}".format(best))
+    else:
+        device = torch.device("cpu")
     return device
     
     
@@ -108,6 +111,7 @@ def train_classifier(dataset, model, use_gpu=True,
     metric= load_metric("glue", "mrpc")
     
     model.to(get_device(use_gpu=use_gpu))   
+    print('Model on {}'.format(model.device))
 
     progress_bar = tqdm(range(nsteps))
     losses = []
@@ -147,6 +151,7 @@ def train_classifier(dataset, model, use_gpu=True,
     print('             F1: {}'.format(temp['f1']))
     
     model.to(device='cpu')  # Put model back on CPU to free up GPU
+    print('Model on {}'.format(model.device))
 
     return model
 
@@ -157,6 +162,7 @@ def classify_punchlines(dataset, model, quiet=False,
     
     # Put model on the correct device
     model.to(get_device(use_gpu=use_gpu, quiet=quiet))
+    print('Model on {}'.format(model.device))    
     model.eval()   # Put the model into "eval" mode
 
     eval_dataloader = DataLoader(dataset, batch_size=batch_size)
@@ -178,6 +184,7 @@ def classify_punchlines(dataset, model, quiet=False,
         if not quiet:
             progress_bar.update(1)
     model.to(device='cpu')   # Put model back on CPU to free up GPU
+    print('Model on {}'.format(model.device))
             
     if return_prob:
         return predictions, probs
@@ -199,6 +206,7 @@ def train_generator(train_dataset, model, use_gpu=True,
 
     # Put model on GPU, if available
     model.to(get_device(use_gpu=use_gpu))
+    print('Model on {}'.format(model.device))    
     model.train()  # Put model in "train" mode
  
     acc_steps = 100
@@ -240,6 +248,7 @@ def train_generator(train_dataset, model, use_gpu=True,
             )
             
     model.to(device='cpu')  # Put model back on CPU to free up GPU
+    print('Model on {}'.format(model.device))
     
     return model
 
@@ -261,6 +270,7 @@ def generate(model, tokenizer, prompts,
 
     # Use GPU device if requested (default: use_gpu=True) and it is available
     model.to(get_device(use_gpu=use_gpu))
+    print('Model on {}'.format(model.device))
     model.eval()        # Put model in "eval" mode
     
     with torch.no_grad():
@@ -308,7 +318,7 @@ def generate(model, tokenizer, prompts,
             output_list.append(output_text)
 
     model.to(device='cpu')  # Put model back onto CPU to free up GPU
-    
+    print('Model on {}'.format(model.device))    
     if str_input:
         output_list = output_list[0]
         
