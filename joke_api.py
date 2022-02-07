@@ -5,8 +5,8 @@ import numpy as np
 import model_tools as mtools
 
 def init(use_gpu = "AUTOMATIC",
-         generator_filename = 'models/JokeGen_gpt2_1.00subset_3epochs_2022-01-05.pt',
-         classifier_filename = 'models/ClassifyJokes_bert_1.00subset_2021-12-16.pt'):
+         generator_filename = 'models/JokeGen_gpt2.pt',
+         classifier_filename = 'models/ClassifyJokes_bert.pt'):
     global gen_model, gen_model_ft, gen_tokenizer, class_model, class_tokenizer, USE_GPU
 
     if use_gpu == "AUTOMATIC":
