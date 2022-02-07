@@ -26,15 +26,15 @@ def init(use_gpu = "AUTOMATIC",
     gen_model_ft = torch.load(generator_filename, map_location=torch.device('cpu'))
 
     # Load the vanilla BERT tokenizer
-    class_checkpoint = mtools.load_model('bert')
+    class_checkpoint = mtools.load_checkpoint('bert')
     class_tokenizer = mtools.load_tokenizer(class_checkpoint)
     # Load our trained BERT classifier
     class_model = torch.load(classifier_filename, map_location=torch.device('cpu'))
 
     # Put all models on the specified device (GPU or CPU)
-    gen_model.to(get_device(use_gpu=USE_GPU))
-    gen_model_ft.to(get_device(use_gpu=USE_GPU))
-    class_model.to(get_device(use_gpu=USE_GPU))
+    gen_model.to(mtools.get_device(use_gpu=USE_GPU))
+    gen_model_ft.to(mtools.get_device(use_gpu=USE_GPU))
+    class_model.to(mtools.get_device(use_gpu=USE_GPU))
 
 
 def class_tokenize_function(example):
