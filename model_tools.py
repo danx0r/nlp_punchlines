@@ -149,9 +149,12 @@ def train_classifier(dataset, model, use_gpu=True,
     print('Done training model.  Final model has:')
     print('       Accuracy: {}'.format(temp['accuracy']))
     print('             F1: {}'.format(temp['f1']))
-    
-    model.to(device='cpu')  # Put model back on CPU to free up GPU
-    print('Model on {}'.format(model.device))
+
+    # Move model off GPU and free up GPU memory
+    model.to(device='cpu')   # Put model back on CPU
+    del(batch,outputs,logits,predictions,metric,loss,losses)
+    del(optimizer,lr_scheduler)
+    torch.cuda.empty_cache()
 
     return model
 
@@ -183,8 +186,11 @@ def classify_punchlines(dataset, model, quiet=False,
             probs.extend(list([p[-1] for p in probs_i.numpy()]))
         if not quiet:
             progress_bar.update(1)
+            
+    # Move model off GPU and free up GPU memory
     model.to(device='cpu')   # Put model back on CPU to free up GPU
-    print('Model on {}'.format(model.device))
+    del(batch,outputs,logits)
+    torch.cuda.empty_cache()
             
     if return_prob:
         return predictions, probs
@@ -247,8 +253,11 @@ def train_generator(train_dataset, model, use_gpu=True,
                 os.path.join(output_dir, f"{output_prefix}-{epoch}.pt"),
             )
             
+    # Move model off GPU and free up GPU memory    
     model.to(device='cpu')  # Put model back on CPU to free up GPU
-    print('Model on {}'.format(model.device))
+    del(input_tensor,loss,outputs)
+    del(optimizer,scheduler)
+    torch.cuda.empty_cache()
     
     return model
 
@@ -263,21 +272,25 @@ def generate(model, tokenizer, prompts,
     https://towardsdatascience.com/how-to-fine-tune-gpt-2-for-text-generation-ae2ea53bc272 
     '''
 
+    print('0: Current GPU memory usage: {}'.format(gpumem.mem()[0]/1e6))    
+
     # Input is a list of strings with length n
     str_input = type(prompts)==str
     if str_input:
         prompts = [prompts]
 
-    # Use GPU device if requested (default: use_gpu=True) and it is available
-    model.to(get_device(use_gpu=use_gpu))
-    print('Model on {}'.format(model.device))
-    model.eval()        # Put model in "eval" mode
-    
     with torch.no_grad():
         
+        # Use GPU device if requested (default: use_gpu=True) and it is available
+        model.eval()        # Put model in "eval" mode
+        model.to(get_device(use_gpu=use_gpu))
+        print('Model on {}'.format(model.device))
+
+        print('a: Current GPU memory usage: {}'.format(gpumem.mem()[0]/1e6))    
+                
         output_list = []
         for i in trange(len(prompts)):
-
+            
             # Token string starts with tokenized input, on same device as the model
             gentokens = torch.tensor(encode_prompt(prompts[i],tokenizer)).unsqueeze(0)
             gentokens = gentokens.to(model.device)
@@ -287,8 +300,7 @@ def generate(model, tokenizer, prompts,
                 
                 # Pass the tokens generated so far ("gentokens") through the model, 
                 #       get loss & logits for the next token prediction
-                model_outputs = model(gentokens, labels=gentokens)
-                loss, logits = model_outputs[:2]
+                loss, logits = model(gentokens, labels=gentokens)[:2]
                 
                 # Scale by the temperature (higher temperature ==> more original/unusual words)
                 logits = logits[:, -1, :] / (temperature if temperature > 0 else 1.0)
@@ -310,15 +322,22 @@ def generate(model, tokenizer, prompts,
                 # If we got an EOS token, stop generating tokens, otherwise continue to maxlength
                 if next_token in tokenizer.encode(tokenizer.eos_token):
                     break
-            
+                    
             # Move the data back to the CPU, decode, and store the generated text
-            gentokens = gentokens.to(device='cpu')
+            
+            loss = loss.detach()
+            logits = logits.detach()
+            next_token = next_token.detach()
+            gentokens = gentokens.cpu()
             output_tokens = list(gentokens.squeeze().numpy())
             output_text = tokenizer.decode(output_tokens)
             output_list.append(output_text)
 
+    # Move model off GPU and free up GPU memory    
     model.to(device='cpu')  # Put model back onto CPU to free up GPU
-    print('Model on {}'.format(model.device))    
+    del(loss,logits,next_token,gentokens)
+    torch.cuda.empty_cache()
+    
     if str_input:
         output_list = output_list[0]
         
