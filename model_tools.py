@@ -111,7 +111,6 @@ def train_classifier(dataset, model, use_gpu=True,
     metric= load_metric("glue", "mrpc")
     
     model.to(get_device(use_gpu=use_gpu))   
-    print('Model on {}'.format(model.device))
 
     progress_bar = tqdm(range(nsteps))
     losses = []
@@ -165,7 +164,6 @@ def classify_punchlines(dataset, model, quiet=False,
     
     # Put model on the correct device
     model.to(get_device(use_gpu=use_gpu, quiet=quiet))
-    print('Model on {}'.format(model.device))    
     model.eval()   # Put the model into "eval" mode
 
     eval_dataloader = DataLoader(dataset, batch_size=batch_size)
@@ -212,7 +210,6 @@ def train_generator(train_dataset, model, use_gpu=True,
 
     # Put model on GPU, if available
     model.to(get_device(use_gpu=use_gpu))
-    print('Model on {}'.format(model.device))    
     model.train()  # Put model in "train" mode
  
     acc_steps = 100
@@ -272,8 +269,6 @@ def generate(model, tokenizer, prompts,
     https://towardsdatascience.com/how-to-fine-tune-gpt-2-for-text-generation-ae2ea53bc272 
     '''
 
-    print('0: Current GPU memory usage: {}'.format(gpumem.mem()[0]/1e6))    
-
     # Input is a list of strings with length n
     str_input = type(prompts)==str
     if str_input:
@@ -284,9 +279,6 @@ def generate(model, tokenizer, prompts,
         # Use GPU device if requested (default: use_gpu=True) and it is available
         model.eval()        # Put model in "eval" mode
         model.to(get_device(use_gpu=use_gpu))
-        print('Model on {}'.format(model.device))
-
-        print('a: Current GPU memory usage: {}'.format(gpumem.mem()[0]/1e6))    
                 
         output_list = []
         for i in trange(len(prompts)):
