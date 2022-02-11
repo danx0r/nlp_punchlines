@@ -9,7 +9,7 @@ import model_tools as mtools
 
 BATCHSIZE = 100
 
-def add_fake_punchlines(infile, start_i=0):
+def add_fake_punchlines(infile, start_i=0, downsample=1):
     '''
     Use a pre-trained NLP text-generator to create "fake" punchlines for each 
     joke in our dataset, with only the joke setup as a prompt.
@@ -21,10 +21,17 @@ def add_fake_punchlines(infile, start_i=0):
     if os.path.exists(outfile): os.remove(outfile)
     
     df = pd.read_csv(infile,dtype={'setup':str,'punchline':str,'score':int},keep_default_na=False)
+    
+    # Downsample if requested and write out downsampled "real" jokes as well
+    if downsample != 1:
+        df = df.sample(frac=1./downsample)
+        df.to_csv(infile.replace('.csv','_ds{}.csv'.format(downsample)),index=False)
+        outfile = outfile.replace('.csv','_ds{}.csv'.format(downsample))        
     print('{} jokes in the dataset'.format(df.shape[0]))    
     df['full_qa'] = df.apply(lambda x: dtools.joke_as_qa(x['setup'], x['punchline']), axis=1)
     df['prompt'] = df['full_qa'].apply(lambda x: x[:x.find('Answer: ')+len('Answer:')])    
     
+
     checkpoint = mtools.load_checkpoint('gpt2')
     tokenizer = mtools.load_tokenizer(checkpoint)
     model = mtools.load_model(checkpoint)
@@ -68,12 +75,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('file', type=str, default=None, 
                         help='input data file path')
+    parser.add_argument('--downsample', type=int, default=1, 
+                        help='downsample data by this factor (default = 1, no sampling)')
     parser.add_argument('--start', type=int, default=0, 
                         help='Which joke index to start on (default = 0, other values to continue crashed process.')
     args = parser.parse_args()
 
     print('Use input file {}'.format(args.file))
     csvfile = args.file
-    add_fake_punchlines(csvfile, start_i=args.start)
+    add_fake_punchlines(csvfile, start_i=args.start, downsample=args.downsample)
     
     
