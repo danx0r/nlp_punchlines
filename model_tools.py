@@ -77,7 +77,7 @@ def pack_tensor(new_tensor, packed_tensor, max_seq_len):
         return packed_tensor, True, None
     
     
-def get_device(use_gpu=True, quiet=False):
+def get_device(use_gpu=True):
     # If GPU was requested, find the one with most free memory
     if use_gpu:
         best, free = gpumem.least_used()
@@ -163,7 +163,7 @@ def classify_punchlines(dataset, model, quiet=False,
                         return_prob=False):
     
     # Put model on the correct device
-    model.to(get_device(use_gpu=use_gpu, quiet=quiet))
+    model.to(get_device(use_gpu=use_gpu))
     model.eval()   # Put the model into "eval" mode
 
     eval_dataloader = DataLoader(dataset, batch_size=batch_size)

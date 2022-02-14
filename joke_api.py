@@ -1,6 +1,6 @@
 import torch
 from datasets import Dataset
-import numpy as np
+from burst_tools import gpumem
 
 import model_tools as mtools
 
@@ -13,6 +13,12 @@ def init(use_gpu = "AUTOMATIC",
         USE_GPU = torch.cuda.is_available()
     else:
         USE_GPU = use_gpu
+
+    if USE_GPU:
+        try:
+            gpumem.mem()
+        except:
+            raise Exception("no GPU found, aborting init (run with --cpu)")
 
     #-------------------------------------
     # Load the NLP Models
@@ -101,11 +107,12 @@ if __name__ == "__main__":
     if "--cpu" in sys.argv:
         init(use_gpu=False)
     else:
-        init()
+        init(use_gpu=True)
+    print ("USE_GPU:", USE_GPU)
     print ("------------------------------------------------------------------")
     setup = "Why did frogs eat the cheese?"
 
     print ("Q:", setup)
-    punchline = get_punchline(setup)
+    punchline = get_punchline(setup, max_tries=1, threshold=0)
     print ("A:", punchline)
     print ()
