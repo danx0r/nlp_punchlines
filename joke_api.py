@@ -76,7 +76,8 @@ def get_punchline(input_text, vanilla_gpt2=False, max_tries=None, threshold=None
     best_score = best_punch = -1
     for i in range(max_tries):
         print (f"---------------ITERATION: {i}-----------------")
-        raw_gentext = mtools.generate(gen_mod, gen_tokenizer, prompts, use_gpu=USE_GPU)
+        raw_gentext = mtools.generate(gen_mod, gen_tokenizer, prompts, 
+                                      use_gpu=USE_GPU,leave_on_gpu=True)
         gentext = [x.replace(gen_tokenizer.eos_token,'').replace('\n',' ').strip() for x in raw_gentext]
         punchlines = [x[x.find('Answer:')+len('Answser:'):] for x in gentext]
 
@@ -88,8 +89,9 @@ def get_punchline(input_text, vanilla_gpt2=False, max_tries=None, threshold=None
 
         # Use the classifier to get predictions (1 = real joke, 0 = fake joke) 
         #     and probability of being a "real" joke (from 0.00 to 1.00)
-        preds, probs = mtools.classify_punchlines(tokenized_gentext, class_model, return_prob=True,
-                                                  batch_size=1, use_gpu=USE_GPU)
+        preds, probs = mtools.classify_punchlines(tokenized_gentext, class_model, 
+                                                  return_prob=True, batch_size=1, 
+                                                  use_gpu=USE_GPU, leave_on_gpu=True)
         score = probs[0]
         print(f"Score: {score} Punchline: {punchlines[0]}")
         if score > best_score:

@@ -109,7 +109,7 @@ def train_classifier(dataset, model, use_gpu=True,
                                  num_warmup_steps=warmup_steps,
                                  num_training_steps=nsteps)
     metric= load_metric("glue", "mrpc")
-    
+
     model.to(get_device(use_gpu=use_gpu))   
 
     progress_bar = tqdm(range(nsteps))
@@ -160,10 +160,18 @@ def train_classifier(dataset, model, use_gpu=True,
 
 def classify_punchlines(dataset, model, quiet=False,
                         use_gpu=True, batch_size=8,
-                        return_prob=False):
+                        return_prob=False,
+                        leave_on_gpu=False):
     
     # Put model on the correct device
     model.to(get_device(use_gpu=use_gpu))
+    print('CP start: model is on {}'.format(model.device))
+    if use_gpu and leave_on_gpu and model.device != 'cpu':
+        pass
+    else:
+        print('CP moving the model...')
+        model.to(get_device(use_gpu=use_gpu))
+    print('CP use model: model is on {}'.format(model.device))
     model.eval()   # Put the model into "eval" mode
 
     eval_dataloader = DataLoader(dataset, batch_size=batch_size)
@@ -186,9 +194,11 @@ def classify_punchlines(dataset, model, quiet=False,
             progress_bar.update(1)
             
     # Move model off GPU and free up GPU memory
-    model.to(device='cpu')   # Put model back on CPU to free up GPU
-    del(batch,outputs,logits)
-    torch.cuda.empty_cache()
+    if use_gpu and not(leave_on_gpu):
+        model.to(device='cpu')   # Put model back on CPU to free up GPU
+        del(batch,outputs,logits)
+        torch.cuda.empty_cache()
+    print('CP end: model is on {}'.format(model.device))
             
     if return_prob:
         return predictions, probs
@@ -262,7 +272,8 @@ def train_generator(train_dataset, model, use_gpu=True,
 def generate(model, tokenizer, prompts,
              use_gpu=True, quiet=False,
              maxlength=30, # maximum number of words in newly generated text
-             top_p=0.8, temperature=1.):
+             top_p=0.8, temperature=1.,
+             leave_on_gpu=False):
     '''
     Use the provided model and tokenizer to extend the input prompts with generated text.
     Adapted from an article and demo code by Francois St-Amant:
@@ -277,8 +288,14 @@ def generate(model, tokenizer, prompts,
     with torch.no_grad():
         
         # Use GPU device if requested (default: use_gpu=True) and it is available
+        print('G start: model is on {}'.format(model.device))
         model.eval()        # Put model in "eval" mode
-        model.to(get_device(use_gpu=use_gpu))
+        if use_gpu and leave_on_gpu and model.device != 'cpu':
+            pass
+        else:
+            print('moving the model...')
+            model.to(get_device(use_gpu=use_gpu))
+        print('G use model: model is on {}'.format(model.device))
                 
         output_list = []
         for i in trange(len(prompts)):
@@ -325,10 +342,12 @@ def generate(model, tokenizer, prompts,
             output_text = tokenizer.decode(output_tokens)
             output_list.append(output_text)
 
-    # Move model off GPU and free up GPU memory    
-    model.to(device='cpu')  # Put model back onto CPU to free up GPU
-    del(loss,logits,next_token,gentokens)
-    torch.cuda.empty_cache()
+    # Move model off GPU and free up GPU memory   
+    if use_gpu and not(leave_on_gpu):
+        model.to(device='cpu')  # Put model back onto CPU to free up GPU
+        del(loss,logits,next_token,gentokens)
+        torch.cuda.empty_cache()
+    print('G end: model is on {}'.format(model.device))
     
     if str_input:
         output_list = output_list[0]
