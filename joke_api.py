@@ -1,3 +1,5 @@
+import time
+
 import torch
 from datasets import Dataset
 from burst_tools import gpumem
@@ -113,8 +115,13 @@ if __name__ == "__main__":
     print ("USE_GPU:", USE_GPU)
     print ("------------------------------------------------------------------")
     setup = "Why did frogs eat the cheese?"
-
     print ("Q:", setup)
-    punchline = get_punchline(setup, max_tries=1, threshold=0)
+    t0 = time.time()
+    punchline = get_punchline(setup, max_tries=3, threshold=10)
+    t1 = time.time() - t0
+    i = punchline.find("Answer:")
+    if i > 0:
+        punchline = punchline[:i]
     print ("A:", punchline)
+    print (f"3 iterations in {t1} seconds ({t1/3} seconds per iteration)")
     print ()

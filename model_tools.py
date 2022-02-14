@@ -1,4 +1,4 @@
-import os, sys
+import os
 import torch
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
